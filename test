@@ -1,0 +1,542 @@
+Une gestion de piscine simple et efficace !
+Rédaction : Mai 2021
+
+Update 08/2021 :
+
+A ce jour, IOpool a indiqué proposer une API “gratuite” dans les mois à venir. Il y a donc fort à parier et espérer que nous pourrons récupérer les valeurs du PH, désinfection et température de l’eau. Cet article vous permet de construire une solution “intelligente” sur la base d’une Raspberry pour le plus important (température, niveau de l’eau) en attendant mieux !
+
+Un billet pour ceux qui en sont équipés bien sûr ! Petit point, ce billet n’est pas sponsorisé, il ne reflète que mon point de vue après plus de 5 ans avec une domotique pour la piscine et encore sur une au chlore !
+
+Etant chanceux propriétaire d’une piscine et ayant fait en quelques années les erreurs de débutant (quantité de produits, renouvellement, durée de filtration, préventif etc) de gestion de cette dernière, je me suis équipé et j’ai construit avec Jeedom et la domotique une utilisation rationnelle de cette dernière ! Avec un objectif de moindre coût… et éviter les 50 languettes par mois !
+
+Vous ne trouverez pas ici le truc qui gère tout, tout seul et qui pilote le Ph en fonction de l’âge du capitaine car mon cahier des charges était le suivant :
+
+suivre la température de l’eau en priorité,
+suivre de manière fiable (mon point de vue plus bas) les indicateurs d’une piscine au chlore : capacité de désinfection, Ph,
+protéger la filtration (pompe) en fonction du niveau de l’eau et piloter intelligemment la durée de la filtration,
+mettre au point une solution fiable et pérenne dans le temps, sans y laisser un bras et un étalonnage régulier.
+
+Gestion de l’extérieur et la piscine
+
+Tableau de gestion de la piscine
+
+Et iopool EcO !
+Mon point de vue :
+
+vous trouverez sur le marché de nombreux objets connectés depuis 3 à 5 ans qui sont arrivés dans ce marché de niche et tout le monde y va de son offre : prix élevé à l’entrée, abonnement, remontée Sigfox “lente”, bascule Bluetooth à portée limitée, étalonnage limite, SAV moyen etc. Mais “marché de niche” dit “valeur ajoutée importante” sur la donnée et ce que l’on peut en faire. Mon point de vue, je ne conçois pas de mettre 300 à 500€ dans un truc qui dort en plein soleil avec un indice d’UV à 8 ! Encore plus, il est impensable pour moi de payer un abonnement pour avoir la donnée car j’ai l’infrastructure à disposition. Il est clair que le type de piscine que vous avez risque de limiter votre choix, bon courage !
+il existe de nombreux systèmes maison pour suivre à l’aide de capteurs Ph etc. Je vous renvoie d’ailleurs vers l’excellent PoolMaster. Pour ma part, pareil, la dérive de ces capteurs et la mise en place est trop lourde à mes yeux sauf dans le cas d’un projet plus global.
+J’ai construit mon système actuel autour de deux agrégateurs et un actionneur :
+
+la Raspberry qui m’est si chère pour avoir des agrégateurs fiables dans le temps (bientôt 4/5 ans que je tourne avec ça dans la maison comme nœuds de remontée de données). Les règles sont toujours les mêmes : pas de log à outrance, pas d’écriture de SD et l’appui du plugin de Jeedouino de Revlys, si fiable, stable. Sur cette dernière, j’ai configuré la température de l’air, la température de l’eau et la température de la pompe. J’ai aussi ajouté un niveau d’eau.
+j’ai pendant un temps utilisé le pilotage depuis les GPIO de la Raspberry pour piloter un contacteur qui enclenchait la pompe de la piscine. De même avec un module Chacon. Forcé de constater que la fiabilité dans le temps m’a obligé de revenir à quelque chose de simple et efficace, le Sonoff. La raison, la Raspberry au niveau de ses GPIO pilotent du 3.3V et il n’existe aucune carte interface relais 3.3V/220V. Il faut bidouiller un 5V/3.3V mais cela fatigue la Raspberry… pour bien faire, un optocoupleur est nécessaire et alourdit un simple contact ON/OFF. Concernant le Chacon 433 MHz, forcer de constater que des heures de filtration avec de la puissance le fatigue aussi (ma pompe fait 1500W). Donc next… Sonoff !
+à cela, j’ai fait la découverte d’Iopool et de son EcO. Cette petite startup belge a le mérite de se démarquer des autres fournisseurs d’objets connectés. Pourquoi ? Une offre simple, un matériel bien moins coûteux que la concurrence, des recommandations de produits et dosages et des alertes … et sans abonnement. Alors oui, il y a un mais ! Pas d’API (l’infrastructure s’en voit allégée) mais pour ma part, l’application Android remise à jour cette année est un vrai plus “WAF” pour sa simplicité d’utilisation. Vous en aurez pour moins de 250€ le système Wifi avec une bonne portée (199€ + 59.9€ – 25€ parrainage au jour où je rédige ce post). Je tiens à souligner que ma première sonde est tombée en panne, en 7 jours, ma sonde a été remplacée sans frais. Voilà, faut aussi dire quand une entreprise, aussi jeune, soit-elle, fait son job ! Elle a encore communiqué récemment sur sa volonté de ne pas tomber dans un modèle abonnement et de miser au contraire sur des produits pour la qualité de l’eau et une offre claire et fiable. Perso, j’adhère. Attention leurs produits ne sont que pour le Chlore, le Brome et le Sel.
+Petit détail, pour ma part, j’ai développé en m’appuyant sur le téléphone qui gère JPI une macro (merci Macrodroid) qui lance l’application, fait un snapshot et Jeedom par le plugin Script retaille l’image, la remonte dans un widget et me notifie par Telegram sans que j’ai à lancer l’application sur mon téléphone. C’est aussi pour cela que j’ai acheté un relais Wifi. A défaut, il vous faudra vous mettre à côté de votre piscine et utiliser votre téléphone pour récupérer les points de mesure de votre sonde par le Bluetooth. Vous pouvez aussi faire le même système en vous appuyant sur votre tablette domotique Android pour peu que l’application Iopool soit aussi installée.
+
+
+Iopool EcO intégré dans Jeedom (hivernage)
+
+Iopool EcO intégré dans Jeedom (saison)
+Le virtuel a légèrement été modifié avec la V2 de l’application d’iopool qui est plus large pour les attentifs ;).
+Et côté Jeedom :
+
+le plugin Piscine qui permet de piloter la durée de filtration et l’optimisation horaire (HC/HP, heure de pivot, % retenu etc) en fonction de la température de l’eau,
+le plugin Jeedouino pour utiliser une Raspberry en agrégateur (température, niveau d’eau etc),
+le plugin Sonoff pour piloter des Sonoff Mini en mode DIY et commander votre moteur,
+les scénarios pour piloter tout cela…
+Concernant la partie Iopool, j’utilise :
+
+Quelques applications Android comme Macrodroid, (que vous retrouverez dans l’article sur la présence) Automate, FTP server avec des macros établies pour faire une copie d’écran après avoir lancé l’application Iopool, la mettre à dispo sur un serveur FTP sur le téléphone et JPI qui est déjà utilisé pour pleins d’autres choses, mais ici pour allumer, éteindre l’écran et jouer sur la durée de veille (et permettre une copie d’écran) – je détaillerai ce que j’ai fait en bas, à défaut de mieux !
+Script pour lancer des scripts sur la VM Jeedom pour récupérer la copie d’écran du téléphone, rogner cette dernière, la placer dans le dossier qui l’affichera dans le widget – je vous donnerai les scripts à mettre en place ;
+Telegram pour envoyer l’image 2 à 3 fois par jour.
+La base … piloter votre pompe !
+Bon, quelques règles de base :
+
+on ne pilote jamais en puissance un équipement,
+on pilote au travers d’un relais qui fait sa mise en forme,
+forcé de constater (voir plus haut) que les systèmes de relais depuis la Raspberry ne sont pas fiables dans le temps et que j’ai laissé de côté quelques modules DIO…
+Je me suis donc tourné vers les modules Sonoff… privilégiez des modules mini R1 ou R2. Le R2 est encore plus simple à intégrer !
+
+Je ne vais pas détailler la procédure d’inclusion dans Jeedom, il existe déjà des centaines de tutoriels sur internet, inutile de réinventer la roue. Je vous redonne mes liens.
+
+Sur les anciennes versions (3.3) ou les R1, ce lien est pour moi le plus “juste”. Privilégiez une bande en 2.4GHz et non en 5GHz quand vous passez votre PC portable ou votre téléphone en point d’accès pour pouvoir piloter le Sonoff.
+
+A défaut, la documentation du plugin est la référence pour “détourner” le Sonoff en mode DIY.
+
+Pour le branchement électrique, pour ma part, j’ai récupéré le neutre et la phase en sortie du contacteur (A1/A2) sur le réseau électrique “horloge”. (on coupe l’électricité, on ne fait pas n’importe quoi, on demande à un copain électricien, etc). Le Sonoff se branche comme un module DIO (voir l’article sur le cumulus). Un neutre, une phase en entrée ; et en sortie un neutre, une phase en sortie. Mais prenez bien les fils de contrôle et non pas les fils de puissance de la pompe ! Bref comme pour le ballon d’eau chaude…
+
+Schéma
+Pilotage (disjoncteur basse puissance 2A vers télécommande EDF) sauf qu’ici ce sera votre contacteur commande pour le moteur de piscine
+
+Pilotage (commandes A1/A2 mais ici, votre module DIO c’est votre SONOFF ; votre cumulus c’est votre pompe de piscine)
+Et donc côté Jeedom, vous aurez votre contacteur Sonoff :
+
+
+Vos Sonoff DIY
+Personnellement, je ne conserve que certaines informations ou commandes qui me servent réellement :
+
+
+Configuration des informations et commandes du module Sonoff
+Je m’arrête là pour l’heure car le le pilotage dépend du niveau d’eau dans la piscine… oui faire tourner une piscine alors que vous avez votre skimmer bloqué, un niveau d’eau trop bas … bein une pompe à vide … chauffe ! Et justement le paragraphe suivant me permettra d’être informé de tout problème de ce type.
+
+Les informations manquantes … très chère Raspberry !
+Nous revenons à la philosophie de quelques articles déjà présents sur le blog :
+
+La Raspberry et l’appui de Jeedouino,
+La remontée d’informations depuis une Raspberry que ce soit pour une boite aux lettres ou un chauffe-eau.
+Ici, j’ai donc utilisé :
+
+une Raspberry PI2 ou PI3 avec alimentation de qualité (3A pour une PI3),
+quelques sondes DS18B20 étanches,
+un niveau d’eau en inox coudé ou non suivant votre besoin.
+
+Capteur de niveau d’eau en inox
+A ce sujet, j’ai aussi un capteur d’impulsion inductif pour remonter la consommation d’eau. Il vous faudra jouer d’une petite électronique pour la mise en forme… là encore, la Raspberry voit un 3.3V, le capteur est alimenté en 5V. Il faut donc ajouter un optocoupleur pour mettre en forme le signal et qu’il soit lisible par la Raspberry et Jeedouino.
+
+CaptureLJ12A3-4.PNG
+Electronique de mise en forme et de comptage d’impulsion – compteur d’eau
+Image
+Tête du capteur inductif sur la flèche d’impulsion
+Image
+Un optocoupleur monté sur une carte à wrapper … à l’époque !
+Depuis, j’ai fait une électronique propre sur des petites cartes propres que l’on peut enficher et à wrapper et compatible sur les GPIO de la Raspberry.
+
+
+Carte enfichable – c’est plus propre !
+Et donc après avoir configuré Jeedouino …. 3 sondes DS18B20, 1 niveau d’eau :
+
+
+Configuration JeedouinoExt
+Les 3 sondes seront utilisées pour :
+
+avoir la température en plein soleil (avec l’indice UV, terriblement efficace pour les enfants et nous-même),
+avoir la température de la pompe et surveiller une surchauffe,
+avoir la température de l’eau, personnellement la sonde rallongée en fil est à 30/40 cm de profondeur et permet d’avoir une mesure fiable de l’eau.
+Pour le niveau de l’eau, dans le skimmer, un petit trou et la sonde est positionnée. Notez que la sonde “navigue” entre un niveau haut et bas, positionnez bien votre niveau haut au niveau le plus haut de votre piscine.
+
+
+Virtuel JeedouinoExt de la raspberry de suivi Piscine
+Comme à l’accoutumée, je recommande de passer par un virtuel de mise en forme au cas où vous devez remplacer un capteur, déplacer un pin de configuration ou tout autre choix… donc par le plugin virtuel, je mets les 4 informations issues de la raspberry ainsi que l’état de la commande du Sonoff
+
+
+Virtuel de mise en forme (avant)
+Petites astuces … notez que j’utilise la fonction round(X,1) pour avoir une bonne représentation.
+
+
+Virtuel de mise en forme (arrière)
+Je me sers des propriétés avancées des informations pour :
+
+être notifié si la température de la pompe dépasse 70°C pendant plus de 10 min. Dans mon cas, j’ai regardé de manière cyclique notamment l’été lors de longues utilisations … vous pouvez même si vous le souhaitez couper votre filtration ensuite. Personnellement, je préfère la notification et je peux couper depuis mon téléphone si besoin ou les tablettes.
+
+Notifications de la température de pompe
+
+Suivi de température de la pompe de piscine
+
+Suivi de température de la pompe de piscine et la filtration
+de même si la température de l’eau de la piscine est trop haute (’cause, bâche qui est trop efficace) et pour éviter les pics de chaud, je regarde sur 4 heures … j’utilise la notification TTS (+télégram) depuis les tablettes JPI.
+
+Notifications de la température de l’eau de la piscine
+
+Evolution de la température de l’eau de la piscine sur plusieurs semaines
+Pour éviter de me trainer des historiques monstrueux, j’ai mis en place un petit scénario de calcul d’historisation qui me donne le minimum, la moyenne et le maximum des températures extérieures et de l’eau.
+
+
+Historisation des données de la veille
+Un scénario programmé tous les jours à 1h du matin (en cron : 1 0 * * *) me calcule les différentes variables en m’appuyant sur plusieurs entrées avec la fonction statisticsbetween() :
+
+
+Calcul des min/moy/max sur les températures
+pour l’eau au min : round(statisticsBetween(#[Piscine][RPI Piscine][Temp Eau]#,min,yesterday 00:00,yesterday 23:59),1)
+pour l’eau en moy : round(statisticsBetween(#[Piscine][RPI Piscine][Temp Eau]#,avg,yesterday 00:00,yesterday 23:59),1)
+pour l’eau au max : round(statisticsBetween(#[Piscine][RPI Piscine][Temp Eau]#,max,yesterday 00:00,yesterday 23:59),1)
+etc
+Je fais de même pour la température extérieure. Comme je possède plusieurs sondes un peu partout :
+
+celle de la piscine,
+une sous terrasse au sud (sonde Xiaomi en extérieur),
+une côté nord (idem),
+une sur les moteurs de climatisation (Daikin).
+Je calcule sur un virtuel, la moyenne des températures extérieures, le minimum de ces températures et le maximum.
+
+pour la moyenne du JOUR : statistics(#[Confort][Zones température][Moy_exterieur]#,avg,Today)
+pour la moyenne de la veille (normalement je ne vous apprends rien) : statistics(#[Confort][Zones température][Moy_exterieur]#,avg,Yesterday)
+D’ailleurs, je calcule une variation moyenne par rapport à la veille et je fais de même à la semaine quand je suis mes consommations, mais cela fera partie d’un article sur le suivi des consommations. Très pratique pour suivre la consommation des climatisations en fonction de la température moyenne extérieure (qui monte ou descend !).
+
+Bein pour la piscine, c’est pareil ! Je peux suivre la consommation de la piscine. Merci Suivi Conso :
+
+
+Forcé de constater qu’il faisait plus chaud l’an passé à la même période et que l’on se baignait déjà !
+
+
+Le suivi de la consommation de la piscine … et de son coût !
+La filtration …
+J’avais mis en place il y a 4 ans une utilisation façon “table de look-up”. En gros, à une température donnée de l’eau, une durée de filtration… je vous engage à lire ce site, très bien documenté et qui tient compte des pertes “charges” de votre système de filtration.
+
+Les règles de base sont :
+
+Il faut filtrer en journée car c’est l’action du soleil et de la chaleur qui fait la photosynthèse et amplifie le développement des algues.
+En période d’exploitation, du printemps à l’automne, temps de filtration = température de l’eau divisée par 2 minimum.
+Si hivernage actif ou lorsque l’eau descend sous 13°C, temps de filtration = température de l’eau divisée par 3.
+Bein, dans les faits, j’ai laissé tomber ces durées. Même si dans mon cas, mon installation photovoltaïque est prévu pour effacer la piscine l’été entre autre …
+
+Je vois dans mon entourage et dans mon expérience que tous les problèmes rencontrés sont liés à des surdosages ou des galets “trop rapides” en dissolution. Et justement iopool y apporte une excellente maitrise. On se rend compte qu’on met bien moins de produits. Et surtout une durée de filtration divisée par 2 !
+
+Bon, oui, pourquoi domotiser la durée de filtration ? car j’en avais marre de régler les picots… de l’horloge ! Là, on se dit, merci la domotique !
+
+Juste un mot sur quelque chose de méconnu ! En aucun cas la filtration ne favorise le mélange des produits chimiques… je vous engage à vous documenter sur la vitesse thermique (aléatoire et propre aux molécules d’eau) qui est bien plus rapide quand l’eau stagne que les vitesses de déplacement gravitationnelles. Merci le fait d’avoir un chimiste au taf !
+
+Et est arrivé l’excellent plugin “piscine” disponible sur Jeedom.
+
+
+Plugin piscine et objet créé
+Bon, dans mon cas, je l’ai configuré comme suit. L’hiver je n’appuie pas sur le plugin. J’ai une simple filtration à l’heure où le soleil est au plus haut entre 12h et 13h, point. L’été, je passe en mode “saison” et je réduis d’un facteur de 60% la durée proposée par le plugin (et cela depuis 4 ans).
+
+Donc… voici ma configuration :
+
+traitement actif, surpresseur inactif, filtre à sable inactif, hivernage par widget, pas d’asservissement externe. J’ai une simple piscine liner enterrée avec pompe filtration à filtres papiers, le tout en chlore,
+température de l’eau issue de la Raspberry et de la sonde avec un bornage de 3 à 33° sur l’eau de la piscine,
+température extérieure issue de la Raspberry et de la sonde DS18B20 installée en extérieure.
+
+Configuration de l’équipement
+Pour la filtration, j’utilise la méthode la courbe, bien expliquée sur la documentation du plugin. Je ne me sers que de la filtration en saison puisque l’hiver je ne fais qu’une filtration d’une durée d’1h (voir plus bas). Pour lancer la filtration, j’enclenche un ON/OFF sur un virtuel (qui me sert sur le design d’ailleurs).
+
+
+Pilotage de la filtration en mode “saison”
+L’interrupteur virtuel qui pilote la pompe de la piscine est celui que j’affiche dans mon design :
+
+
+L’interrupteur “filtration” est celui que pilote l’objet du plugin
+Pour le reste, rien de plus que “forcer” un CRON de répétition toutes les 30min et l’ajout d’un bouton reset que je me sers si j’ai une grosse variation de température (dilution de l’eau ou autre).
+
+
+Configuration avancée
+Et vous arrivez alors à ça :
+
+
+Objet piscine
+Sauf que pour ma part, j’ai ajouté un niveau d’eau et que je ne veux pas “flinguer” ma pompe. De même, quand je nage, plonge … il y a des remouds et il est hors de question que la piscine stoppe à tout va quand le flotteur “saute”.
+
+Là encore, un petit virtuel que nous allons piloter pour “filtrer” le niveau d’eau.
+
+
+Niveau de l’eau (virtuel avant)
+
+Niveau de l’eau (virtuel arrière)
+Je vais donc utiliser le niveau de l’eau “brut” et piloter au bout d’un certain temps, un niveau d’eau filtré. Deux scénarios :
+
+
+Scénarios de report du niveau d’eau avec filtrage
+Les deux scénarios fonctionnent sur un déclencheur “double” : un cron à 10 minutes */10 * * * * et sur un changement d’état du niveau d’eau “brut” binaire [Piscine][RPI Piscine][Niveau Eau]. Il faut que le niveau de l’eau issu du capteur sur la Raspberry soit historisé (au moins sur une heure donc !) :
+
+simple et efficace le niveau d’eau est vu trop bas quand la durée du niveau d’eau brut (celui de la Raspberry, vous suivez ?) est supérieure à 5 minutes, que le niveau est à 0 et que le niveau “filtré” était à 1 :
+
+Basculement du niveau filtré en KO
+oula… pour l’autre, bein c’est pareil mais dans l’autre sens : la durée du niveau d’eau brut (celui de la Raspberry, vous suivez ?) est supérieure à 5 minutes, que le niveau est à 1 et que le niveau “filtré” était à 0 :
+
+Basculement du niveau filtré en OK
+A partir de là, dans mon widget “Panel”, j’ai ajouté quelques informations :
+
+le niveau brut issu de la Raspberry,
+le niveau filtré (qui est l’information de l’interrupteur créé),
+un reset qui est en fait un appui sur le bouton OK de l’interrupteur virtuel du niveau d’eau filtré (niveau OK) donc :
+
+Suivi du niveau d’eau de la piscine (brut et filtré)
+Et dans le même principe, tout l’intérêt du niveau d’eau et de pouvoir piloter la piscine en filtration si le niveau est bon ! Je présente sur un virtuel :
+
+un interrupteur ON/OFF qui pilotera la filtration de la piscine (et donc le relais Sonoff moyennant une autorisation du niveau d’eau,
+l’état du relais Sonoff et l’état de la filtration (l’info de l’interrupteur virtuel précédent) :
+
+Informations dans le widget panel (design)
+
+Informations sur le design domotique – la piscine se gère tout seule, donc pas besoin d’avoir l’interrupteur de filtration
+Et donc maintenant, nous allons mettre en place une filtration intelligente sur le niveau de l’eau. Pour simplifier la gestion, l’interrupteur pilote directement le module SonOff. Comme je le fais régulièrement, dans la configuration de la commande que vous allez créer (voir l’article sur les interrupteurs), ajoutez l’action après l’appui du bouton. Le ON du module Sonoff dans le cas du ON du bouton interrupteur et l’inverse pour le OFF…
+
+
+Bouton filtration ON/OFF
+
+Cas de la filtration en marche
+Dernière étape, mettre en place la protection sur le niveau d’eau. Un scénario dédié qui agira sur le niveau de l’eau et sur l’état du SonOff (état du relais de filtration).
+
+
+Scénario dédié pour la protection de la pompe sur événements
+Dans le principe, simple. Non répétition activé (car une fois que le niveau est OK ou KO, on ne va pas répéter …) :
+
+si le niveau de l’eau est KO, je bascule par sécurité tout de suite la filtration
+
+Scénario dédié pour la protection de la pompe (OK et KO)
+Mais une filtration “intelligente” avec de la remontée d’informations !
+A partir de là, vous pouvez vous appuyer sur le plugin Piscine. Pour ma part, j’ai préféré mettre en place, comme je l’ai expliqué plus haut, une filtration comme suit :
+
+l’hiver : filtration à heure fixe 1h ; pas du tout de filtration “intelligente”. Pas de mode AUTO, on utilise du ON/OFF.
+en saison (été et autres) : filtration adaptative qui s’appuie sur le plugin piscine. On exploite donc le mode AUTO.
+A partir de là, il m’a fallu créer certains virtuels pour mettre tout cela en place.
+
+Première étape, une information “maison” sur la base d’une variable (mode, durée de filtration et horaires). Ensuite, dans mon panel avancé, j’affiche l’état du virtuel et l’interrupteur de choix du mode de filtration (saison/hiver).
+
+
+Informations de filtration sur tablette domotique
+
+Variable “horaires_filtration” avec une astuce pour avoir un affichage sur 2 lignes !
+
+Interrupteur saison/hiver (avant)
+
+Interrupteur saison/hiver (configuration)
+J’ai ensuite créé 5 commandes clés pour la piscine car le plugin piscine, à mes yeux, n’était pas assez complet par rapport à mon usage.
+
+
+5 commandes clés
+
+5 actions pour piloter la piscine au quotidien
+Enfin, quelques virtuels “à côté” pour mieux gérer les scénarios derrière :
+
+
+Quelques virtuels additionnels
+un virtuel de l’état de la filtration (plus simple que le widget piscine trop complet !)
+un interrupteur ON/OFF pour la filtration d’hiver (1h)
+une commande pour filtrer 20 minutes à la demande.
+A partir de là toutes les commandes et les informations sont prêtes.
+
+Nous allons donc tout configurer !
+
+Pour la filtration 20 minutes, un simple bouton qui bascule une information à 1 et se remet à 0 au bout d’1 minute :
+
+
+Virtuel 20 minutes
+Un scénario qui se lancera sur l’appui du bouton : [Piscine][Filtration manuelle (20 min)][Filtration20min]# == 1. Il semble assez lourd, mais dans le principe j’utilise les 5 commandes crées plus haut. La difficulté réside dans le fait que je fais de la notification TTS (sur la base de cet article). Si nous sommes en mode saison, on bascule en mode AUTO, sinon on bascule en OFF. Forcément au début, on passe par du ON ! Comme la filtration est gérée par un scénario indépendant (niveau d’eau), il se peut que la filtration s’arrête en plein milieu. J’en tiens compte dans mes basculements.
+
+
+Scénario de filtration 20 minutes
+Pour la filtration hiver, un interrupteur ON/OFF et l’information adéquate.
+
+
+Filtration d’hiver 1h ON/OFF
+Ici, j’utilise les propriétés avancées, configuration pour activer/désactiver le scénario qui gère la filtration d’hiver.
+
+
+Activation du scénario de filtration d’hiver (faites de mêmes mais désactiver pour le OFF).
+Un scénario qui se lance à 11h30/12h30 sur CRON :
+
+
+Scénario sur CRON pour la filtration d’hiver
+Vous retrouverez le principe du scénario 20minutes présenté plus haut. J’utilise aussi la notification TTS.
+
+
+Scénario de filtration d’hiver
+Un virtuel, information à 3 états (commandes) :
+
+
+0 = inactif, 1 = actif, 2 = auto
+Bon et nos 5 commandes ?
+
+On appuie sur les “bons boutons” :
+
+
+5 actions
+STOP : je bascule le plugin en inactif. En clair, AUCUNE filtration autorisée.
+ON : je bascule le plugin en actif. En clair, c’est une MARCHE FORCEE.
+20min : je lance une filtration 20 min. Simple lancement d’un scénario qui fait ON et AUTO au bout de 20 minutes (pas OFF !)
+RESET : recalcule la durée de filtration en mode SAISON (été).
+AUTO : bascule la piscine en mode ETE (filtration calculée en fonction de la température voir plus haut).
+Et maintenant le meilleur pour la fin, l’interrupteur HIVER/SAISON.
+
+
+L’interrupteur HIVER/SAISON
+Quand on est OFF, j’affecte à la variable (Etat_piscine) qui est sur l’information Mode piscine : “Hivernage – Filtration Minimale”. Dans les propriétés, configuration sur appui, on active l’interrupteur de filtration 1h, on bascule le plugin Piscine sur inactif et hivernage. Pour la partie IOpool, j’en parlerai plus bas, mais gardez en tête les 3 lignes si vous voulez le mettre en place. Je désactive l’automatisation de la remontée de l’application et du traitement de l’image. L’interrupteur fige alors une image d’hivernage pour toute la durée de l’hivernage.
+
+Gestion de la partie hivernage
+Quand on est ON, même combat. Dans les propriétés, configuration sur appui, on bascule l’interrupteur de filtration 1h à OFF, on bascule le plugin Piscine en auto et saison. Pour la partie IOpool, j’en parlerai plus bas, mais gardez en tête les 3 lignes si vous voulez le mettre en place. J’active l’automatisation de la remontée de l’application et du traitement de l’image. L’interrupteur fige alors une image de filtration qui sera renouvelée toutes les heures.
+
+Gestion de la partie saison/été
+A cela, il faut ajouter un scénario qui affichera correctement les données de filtration et le mode sélectionné. Je remets à jour toutes les heures et sur événements dédiés (notamment sur les changements de mode) :
+
+
+Scénario de mise à jour des données de filtration et du mode
+Le caractère <BR> ou CH(10) permet de faire un saut de ligne.
+
+
+Affichage du mode et des heures de filtration
+Et iopool ?
+La sonde ne possédant pas d’API, j’ai quand même souhaité mettre en place une intégration dans Jeedom. Certes, je n’aurai pas les données historisées (sauf celles de ma Raspberry) mais j’ai mis en place une remontée de l’affichage de l’application.
+
+Je partage ma méthode, elle est certainement optimisable mais elle marche maintenant depuis 2 étés et est WAF. Le principe est le suivant :
+
+
+Applications utilisées pour le partage iopool
+ayant des tablettes et un téléphone sous JPI (voir article sur JPI) et ayant mis en place pas mal d’automatisation à l’aide de Macrodroid ou Automate sous Android (voir article sur la remontée GPS des téléphones pour la présence), j’ai installé l’application iopool sur le téléphone qui envoie les SMS. J’ai préféré aussi utiliser le téléphone car il est dans le garage et son allumage toutes les heures pour la copie d’écran ne gêne en rien ;
+je m’appuie donc sur la capacité de remontée de données de la sonde EcO par le relais Wifi Bluetooth et m’évite la traditionnelle sortie dans le jardin pour “voir” l’état de la piscine. L’info vient à moi et non l’inverse !
+il faut jouer de quelques astuces par adb pour bien régler la taille de l’écran suivant votre téléphone, ou pour autoriser la copie d’écran en mode diffusion d’écran. Je donne ici deux approches que j’ai testées et qui marchent suivant l’Android utilisé (notamment après Android 9, ça devient sportif sans root). Après avoir téléchargé ADB sur votre ordinateur, branchez votre téléphone et activer le debug USB (il faut activer les Options Développeurs avant). Cherchez sur Google, il y a des millions de tutoriels pour faire ça… Approuvez la connexion USB sur votre téléphone et quelques commandes clés en invite de commande. C’est clair que si ADB c’est du chinois pour vous, il va falloir vous documenter…
+
+Pour régler la densité de l'écran :
+adb shell wm density 240 && adb reboot
+Pour être sûr que le wifi ne se désactive pas tout seul quand le téléphone est en veille :
+adb shell settings put global wifi_sleep_policy 2
+adb shell settings put global wifi_scan_always_enabled 1
+Pour autoriser la copie d'écran et la diffusion d'écran sans le message d'avertissement :
+adb shell appops set com.llamalab.automate PROJECT_MEDIA ignore
+adb shell appops set com.arlosoft.macrodroid PROJECT_MEDIA ignore
+adb reboot
+L’alternative, si cela ne marche pas est de passer par Shizuku et App ops et d’autoriser appops dans les applications de Shizuku. Il vous faudra démarrer Shizuku par ADB (cliquez sur Start by connecting to a computer). Ensuite, autorisez l’application App Ops dans “Application Management”. Vous allez donc faire la même chose non pas en ligne de commande mais par Shizuku pour passer à ignore les 2 applications (Automate et Macrodroid) dans leurs propriétés “project_media”. Les changements seront conservés ensuite, donc pas besoin de faire cette manipulation de manière récurrente sauf en cas de mise à jour !
+pensez à désactiver l’optimisation de batterie sur les applications suivantes : JPI, PAW server, IOpool, Macrodroid, Automate et primitive FTP.
+
+Utilisation de Shizuku et AppOps
+J’ai mis en place une automatisation en place sur ces outils qui est la suivante :
+
+Jeedom, dans un scénario qui est lancé toutes les heures après avoir allumé l’écran du téléphone et modifier la durée de veille (par le biais de JPI) initie une macro Macrodroid par l’utilisation d’un webhook (trigger qui déclenche la macrodroid sur le téléphone, un déclencheur en bref). Utilisez le plugin script pour piloter l’action HTTP du webhook.
+
+Simple scénario qui allume l’écran (une action dans les propriétés modifie la durée de mise en veille) et enchaine sur l’appel Macrodroid par Webhook
+
+Script HTTP pour appeler le Webhook Macrodroid
+la macro Macrodroid supprime la dernière image exportée, règle une nouvelle fois (au cas où) la durée de veille d’écran, lance une macro Automate (certaines choses n’étant pas possibles avec Macrodroid, il m’a fallu trouver une parade) ; attends 1 minute (le temps qu’elle s’exécute) et lance un scénario Jeedom qui récupère l’image par FTP, nettoie l’image (cropping, déplacement etc) et la position dans le bon répertoire pour qu’elle soit affichée dans le design. La macro se termine avec une mise en veille à 15 secondes sur le téléphone (on revient au fonctionnement classique sous JPI).
+Il faut piloter le scénario précédent par l’API Jeedom par : http://IP_DE_VOTRE_JEEDOM_EN_LOCAL/core/api/jeeApi.php?apikey=VOTRECLEAPI&type=scenario=IDSCENARIO&action=start
+
+Macro Macrodroid IOpool
+Le scénario Jeedom de traitement s’appuie sur un script SH (qui lui-même en appel d’autres) wget_snapshot. Suivant l’heure et le mode de présence, j’informe les utilisateurs 2 fois par jour ou 3 fois par jour. A défaut, la remontée dans le widget Jeedom se fera donc toutes les heures (puisque Macrodroid est lui-même initié par un scénario qui tourne toutes les heures si le mode été est activé, vous suivez :D) ?
+
+
+Scénario jeedom de traitement de l’image et notifications/déplacement dans le répertoire du widget
+Le script SH qui est appelé est positionné dans le répertoire data du plugin script. Pensez à y appliquer les droits et le bon propriétaire par les commandes :
+
+sudo chown www-data:www-data votre_script.sh
+sudo chmod 775 votre_script.sh
+sudo chmod u+x votre_script.sh
+
+Script SH de traitement de l’image iopool côté Jeedom
+J’utilise le paquet imagemagick pour couper l’image correctement qu’il vous faudra installer :
+
+sudo apt-get install imagemagick
+J’utilise donc deux scripts SH. Le premier crop_image.sh permet d’utiliser imagemagick pour prendre l’image et la traiter :
+
+#!/usr/bin/env python3
+import subprocess
+import sys
+
+# image, crop- dimensions
+img = sys.argv[1]; left = sys.argv[2]; right = sys.argv[3]; top = sys.argv[4]; bottom = sys.argv[5]
+# arrange the output file's name and path
+img_base = img[:img.rfind(".")]; extension = img[img.rfind("."):]; path = img[:img.rfind("/")]
+#img_out = img_base+"[cropped]"+extension
+# get the current img' size
+data = subprocess.check_output(["identify", img]).decode("utf-8").strip().replace(img, "")
+size = [int(n) for n in data.replace(img, "").split()[1].split("x")]
+# calculate the command to resize
+w = str(size[0]-int(left)-int(right)); h = str(size[1]-int(top)-int(bottom)); x = left; y = top
+# execute the command img_out
+cmd = ["convert", img, "-crop", w+"x"+h+"+"+x+"+"+y, "+repage", img_base+extension]
+subprocess.Popen(cmd)
+Le second get_snapshot.sh supprime l’image localement, récupère l’image depuis le téléphone par FTP, change les droits, rogne l’image (adaptez les dimensions si nécessaires au format : nombre de pixels à gauche à supprimer, idem à droite, idem en hauteur, idem depuis le bas). Enfin, il stocke l’image dans le répertoire qui sera utilisé par le widget iopool pour les designs ici /var/www/html/montheme/images/.
+
+#!/bin/bash
+echo "Suppression du fichier récupéré"
+sudo rm /home/boss/iopool_snapshot.*
+sleep 3s
+echo "Récupération du fichier snappé"
+sudo wget -P /home/boss ftp://192.168.2.200:2221/iopool_snapshot.png
+sleep 3s
+echo "Attribution des droits"
+sudo chown www-data:www-data /home/boss/iopool_snapshot.png
+sudo chmod 775 /home/boss/iopool_snapshot.png
+sleep 3s
+echo "Cropping de l'image pour nettoyer la bannière"
+cd /home/boss
+sudo /var/www/html/plugins/script/data/crop_image.sh iopool_snapshot.png 20 20 130 620
+sleep 3s
+sudo chown www-data:www-data /home/boss/iopool_snapshot.png
+sudo chmod 775 /home/boss/iopool_snapshot.png
+echo "Suppression et copie pour design"
+sleep 3s
+sudo rm /var/www/html/montheme/images/iopool_*.png
+sleep 3s
+sudo cp /home/boss/iopool_snapshot.png /var/www/html/montheme/images/iopool_snapshot[cropped].png -f -p
+echo "Tout est fini !"
+Voici le widget que j’utilise pour afficher l’image, widget html à créer (c’est un widget que j’avais fait en V3 au format INFO/AUTRE que j’ai réutilisé tel que). Il s’appuie sur une image hivernage quand l’interrupteur est à OFF (pour rappel). Le fichier est là si besoin… vous pouvez faire le votre ! Pensez à appliquer le widget à l’information adapté (voir plus haut). Adaptez les chemins de stockage à votre configuration et votre VM, dans les fichiers SH et dans le widget !
+
+
+Image pour l’hivernage de la sonde
+iopool_hivernageDownload
+<div style="padding:0;width:327px;min-height:351px;" class="cmd #history# tooltips cmd-widget container-fluid" data-type="info" data-subtype="binary" data-cmd_id="#id#" data-cmd_uid="#uid#" title="#collectDate#">
+	<div class="row">
+		<div class="center-block col-xs-12 h5 cmdName" id="cmdName#id#" style="margin-top:0; #hideCmdName#;"></div>
+		<div class="center-block col-xs-12 iconCmd#uid#"></div>
+	</div>
+<!-- Ne Pas Supprimer width="327"-->
+	<script class="createWidgetInfo" type="text/javascript">//<![CDATA[{"type":"1","version":"1","image1":"LedRougeVide.gif","image2":"Led_verte.png"}]]></script>
+<!-- Ne Pas Supprimer -->
+	<script>
+		jeedom.cmd.update['#id#'] = function(_options){
+			$(".iconCmd#uid#").empty();
+			if (parseInt(_options.display_value) == 1) {
+				$(".iconCmd#uid#").append('<img src="/montheme/images/iopool_snapshot[cropped].png" width="327"/>');
+			} else {
+				$(".iconCmd#uid#").append('<img src="/montheme/images/iopool_hivernage.png" width="327"/>');
+			}
+			$('.cmd[data-cmd_id=#id#]').attr('title','Valeur du '+_options.valueDate+', collectée le '+_options.collectDate);
+		}
+		jeedom.cmd.update['#id#']({display_value:'#state#',valueDate:'#valueDate#',collectDate:'#collectDate#',alertLevel:'#alertLevel#'});
+	</script>
+</div>
+la macro Automate précédemment énoncée permet de lancer l’application, supprimer le fichier (oui 2 fois on ne sait jamais !), faire la copie d’écran, la stocker au bon endroit, remettre JPI au premier plan et revenir à une veille. J’ai remarqué quelques soucis sur les mises en veille et la suppression de fichiers, donc j’ai préféré le faire des deux côtés Automate et Macrodroid. Le fichier au cas où est ici :
+SharenewDownload
+
+Macro Automate – IOpool
+côté téléphone, je m’appuie sur un serveur FTP “simple”, plusieurs applications sont disponibles sur le playstore. J’ai gardé “primitive FTP” complet et fiable. Seul bémol, malgré l’option proposée dans l’application, j’ai observé qu’il vous faut créer une macro de démarrage au téléphone sous Macrodroid pour forcer son démarrage dans certains cas L’activation du serveur FTP se fera automatiquement (voir dans les préférences). Comme le téléphone est sur le réseau local, un FTP classique (non SFTP), port 2221 (à aligner dans votre script), en anonyme. J’ai privilégié le mode SAF plus fiable dans le temps. Pensez à ne pas activer la modification de la veille (surtout avec JPI) qui se traduira par une décharge rapide du téléphone sinon. La copie d’écran qui est supprimée, stockée, à disposition par le serveur FTP est dans le répertoire Downloads (pas de faille comme ça…) :
+
+Stockage, nommage et récupération de l’image snapshot de l’application iopool
+
+Configuration du serveur FTP
+
+Paramétrage du serveur FTP
+Grace à tout cela, l’objectif est donc de passer de ça :
+
+
+Vue application
+A ça :
+
+
+Vue design
+Ou ça :
+
+
+Vue notifications
+Et la piscine ?
+Quelques axes de réflexion qui sont la somme de mes expériences d’utilisateur :
+
+j’ai calculé l’évaporation de ma piscine par rapport à l’utilisation d’une bâche à bulles notamment à cause du vent l’été et l’évaporation “lunaire” (oui !) ;
+j’ai arrêté les filtrations à 24h ou 12h pour passer aux durées /4 et cela même à 30° (et cela depuis 4 ans) ;
+j’utilise ma piscine d’avril à début novembre environ (notamment car je m’entraine en combinaison, ça c’est un autre sujet) donc autant vous dire qu’elle est exploitée !
+l’évaporation n’enlève le stabilisant et ce dernier a tendance à rester au fond de la piscine ; donc la sonde voit une stabilisant “faux” le matin… j’utilise principalement des galets sans stabilisant chlore lent ou des galets 5 actions stabilisés. Donc il faut vider la piscine tout au tard…. il n’y a pas le choix pour enlever le stabilisant ;
+j’utilise une bâche de sécurité d’hivernage. La piscine tourne une heure à midi (sur la production photovoltaïque) et je remets 2 galets de chlore lent tous les 3 à 4 semaines ;
+je dois faire 2 ou 3 traitements “chlore-choc” en début de saison et généralement après quelques jours d’inutilisation notamment quand nous partons en vacances ;
+j’utilise une bâche transparente d’été qui me permet d’avoir 30° très rapidement ; l’an dernier, début mai, nous nous baignons ! bon OK, on est dans le sud et la piscine est plein sud !
+Pour sentir ma consommation d’eau pour la piscine :
+
+Evaporation moyenne d’une piscine sans protection (faites l’expérience avec une bassine) : 5mm à 1cm max (oui, vent + chaleur bonjour…) mais la même expérience l’hiver donne quelques millimètres. Je garde donc 0.006 sur l’année ;
+Ma piscine Waterair Escatop a été modifiée par le précédent propriétaire pour être légèrement raccourcie. Le détail de mes calculs…
+Profondeur : 1,2m à 1,6m sous margelles
+Longueur : 7,87m
+Largeur : 4,75m et 3,57m (en forme haricot)
+Profondeur moyenne : (1,2+1,6)*0,5 = 1,4m
+Largeur moyenne : (4,75+3,57)*0,5 = 4,16m
+
+Volume piscine ovale :
+0.89 * Pmoy * Lmoy * lmoy = 41m3 ; +1m3 pour l'escalier à la louche...
+Surface piscine ovale :
+0.89 * Lmoy * lmoy = 29,1m2 arrondi à 31 pour l'escalier.
+
+Evaporation moyenne annuelle:
+0,006 * 365 * 31 = 68 m3
+
+Je fais en moyenne 3 lavages de filtres par an ; environ 10m3 par an (facile à quantifier).
+
+En gros, 80m3 par an en étant pessimiste. A noter que la pluviométrie annuelle chez moi est de l'ordre de 37m3 (1,2m d'eau sur l'année mal réparti, c'est peu de le dire et surtout pas l'été !).
+Même si il est très difficile de mesurer sa consommation d’eau d’une année sur l’autre pour un usage donné SANS avoir un compteur dédié (ce n’est pas aussi facile à détecter que pour la courbe de charge électrique ; cela fera l’objet d’un article !) … personnellement, j’ai ajouté un compteur d’eau à la piscine (quelques références ici) et je suis entre 50 et 60m3.
+
+
+Le relais Wifi Bluetooth
+
+Bonne baignade !
+Je vous remets le lien de parrainage. En toute sincérité, je préfère un don via Paypal car je n’achète pas ou peu leurs produits… mais l’intérêt est pour vous d’acheter le produit EcO et le relais moins cher (comme expliqué en début d’article).
+
+https://refrr.app/GxdvVmlaEq/58728
+
+Si vous avez aimé cet article, remerciez-moi en considérant une petite donation financière par Paypal. Inutile de vous dire que pour arriver à cette installation, j’ai passé beaucoup de temps. Et je n’y touche plus car cela tourne ! C’est certainement la chose la plus appréciable et WAF que madame apprécie. Aussi, cela prend du temps de rédiger et de partager ce contenu, sans publicité ! La récente augmentation de la base de données pour stocker toutes ces copies d’écran n’est pas gratuite ! Tant mieux, si vous avez l’impression de gagner du temps pour votre installation et payez-nous un coup à boire ! Santé !
+
+Merci !
